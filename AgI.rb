@@ -86,12 +86,17 @@ inputdata.each { | inputhash |
 #create a temporary directory to write 
 tmpdir = Dir.mktmpdir or raise "Directory /tmp must be writable by the current user."
 
+#main loop - generates meta-data, copies includes, and creates ISOs
 instances.each { | instancecur |
     instancefile = File.new("#{tmpdir}/meta-data","w")
     instancefile.write( instancecur.to_yaml )
     instancefile.close
-    instanceuserdata = instancecur['user-data'] or instanceuserdata = userdata
-    FileUtils.cp( instanceuserdata, tmpdir ) or raise "Must be able to copy #{instanceuserdata} to #{tmpdir}."
+    if instanceuserdata = instancecur['user-data'] or instanceuserdata = userdata
+	FileUtils.cp( instanceuserdata, "#{tmpdir}/user-data" ) 
+    else 
+	raise "Must be able to copy #{instanceuserdata} to #{tmpdir}."
+    end
+
     if system( "#{isogen} -output #{outdir}/#{instancecur['instance-id']}.iso -volid cidata -joliet -rock #{tmpdir}/* > /dev/null 2>&1" )
 	$stderr.puts "ISO generation for #{instancecur['instance-id']} successful!"
     else
