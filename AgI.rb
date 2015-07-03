@@ -32,6 +32,13 @@ opts = GetoptLong.new(
 
 opts.each { |option, value|
     case option
+    when '--help'
+	puts "usage: AgI.rb [OPTIONS] ... --name <INSTANCE> [OPTIONS] ... "
+	puts "\t-n\n\t--name <instance>\tBase name for a group of instances"
+	puts "\t-c\n\t--count <integer>\tNumber of a given instance to generate"
+	puts "\t-u\n\t--userdata <file>\tCloud-init yaml configuration to supply\n\t\t\t\tto a group of instances"
+	puts "\t-C\n\t--directory <dir>\tDestination directory for generated files"
+	exit 0
     when '--name'
 	if String(value).length > 0
 	    inputdata << { "name" => value }
