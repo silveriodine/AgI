@@ -1,6 +1,5 @@
 #!/usr/bin/ruby -w 
 
-
 require 'fileutils'
 require 'getoptlong'
 require 'tmpdir'
@@ -14,6 +13,7 @@ userdata = nil
 isogen = nil
 tmpdir = nil
 outdir = Dir.getwd
+qcowback = nil
 
 def genmetadata( id )
     md = Hash.new
@@ -22,12 +22,22 @@ def genmetadata( id )
     return md
 end
 
+def goodqcow?( qcowfile )
+    if File.exist?( qcowfile ) && system( "which file > /dev/null 2>&1" )
+	fileout = %x[ file "#{qcowfile}" ]
+	return fileout.include?( "QEMU QCOW Image (v2)" )
+    else
+	return False
+    end
+end
+
 opts = GetoptLong.new( 
     [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
     [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--count', '-c', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--userdata', '-u', GetoptLong::REQUIRED_ARGUMENT ],
-    [ '--directory', '-C', GetoptLong::REQUIRED_ARGUMENT ]
+    [ '--directory', '-C', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--disk', '-d', GetoptLong::REQUIRED_ARGUMENT ]
 )
 
 opts.each { |option, value|
@@ -61,6 +71,12 @@ opts.each { |option, value|
 	end
     when '--directory'
 	outdir = value
+    when '--disk'
+	if goodqcow?( value )
+	    qcowback = value
+	else
+	    raise "The file specified must be valid and QCOWv2 format"
+	end
     end
 }
 
