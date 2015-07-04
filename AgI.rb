@@ -57,25 +57,35 @@ opts.each { |option, value|
 	end
     when '--count'
 	if inputdata.count > 0 and Integer( value ) > 0
-	    inputdata[-1]['count']=Integer( value )
-	elsif inputdata.count > 0
+	    inputdata[-1]['count'] = Integer( value )
+	elsif Integer( value ) > 0
 	    raise "Count must be a positive integer"
 	else
 	    raise "Count must come after a --name arument"
 	end
     when '--userdata'
-	if File.file?( value )
-	    userdata = value
-	else
+	if ! File.file?( value )
 	    raise "Userdata must be path to a readable file."
 	end
-    when '--directory'
-	outdir = value
-    when '--disk'
-	if goodqcow?( value )
-	    qcowback = value
+	if inputdata.count > 0
+	    inputdata[-1]['userdata'] = value
 	else
+	    userdata = value
+	end
+    when '--directory'
+	if inputdata.count > 0
+	    inputdata[-1]['outdir'] = value
+	else
+	    outdir = value
+	end
+    when '--disk'
+	if ! goodqcow?( value )
 	    raise "The file specified must be valid and QCOWv2 format"
+	end
+	if inputdata.count > 0
+	    inputdata[-1]['qcowback'] = value
+	else
+	    qcowback = value
 	end
     end
 }
