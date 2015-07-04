@@ -94,6 +94,7 @@ end
 Dir.exist?( outdir ) or raise "Specified path must be a directory."
 File.writable?( outdir ) or raise "Specified location must be writable."
 
+#convert input data into instance profiles
 inputdata.each { | inputhash |
     if inputhash['count'] == nil
 	instances << genmetadata(inputhash['name'])
@@ -127,6 +128,7 @@ instances.each { | instancecur |
     end
 }
 
+#cleanup
 FileUtils.rm_rf( tmpdir )
 
 #debug output
@@ -139,9 +141,13 @@ FileUtils.rm_rf( tmpdir )
 #DONE detect whether genisoimage/mkisofs otherwise error out and advise the use of directories.
 #DONE take userdata input file and include in all inputdata
 #TODO ?defaults input before any --name parameters
+#TODO restructure getopt loop to handle default & override configurations.
+#TODO warn aboout any unset default userdata
 #TODO name dir after instance id.
 #DONE name iso after instance id.
 #DONE alternate output directory
 #DONE set up instance specific userdata
 #TODO set up qcow2 backed-cloning
+#TODO create error message and exit function.
+#TODO create cleanup function 
 #
