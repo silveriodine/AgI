@@ -31,6 +31,12 @@ def goodqcow?( qcowfile )
     end
 end
 
+def goodoutdir?( possibledir )
+    #determine if output dir is writable
+    Dir.exist?( possibledir ) or raise "Specified path must be a directory."
+    File.writable?( possibledir ) or raise "Specified location must be writable."
+end
+
 opts = GetoptLong.new( 
     [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
     [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
@@ -73,6 +79,9 @@ opts.each { |option, value|
 	    userdata = value
 	end
     when '--directory'
+	if ! goodoutdir?( value ) 
+	    raise "Output directory must be a valid and writable."
+	end
 	if inputdata.count > 0
 	    inputdata[-1]['outdir'] = value
 	else
@@ -99,10 +108,6 @@ elsif system( "which mkisofs > /dev/null 2>&1" )
 else
     raise "System must have genisoimage or mkisofs installed in the current mode."
 end
-
-#determine if output dir is writable
-Dir.exist?( outdir ) or raise "Specified path must be a directory."
-File.writable?( outdir ) or raise "Specified location must be writable."
 
 #convert input data into instance profiles
 inputdata.each { | inputhash |
