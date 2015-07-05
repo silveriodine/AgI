@@ -143,7 +143,7 @@ inputdata.each { | inputhash |
 	instances << geninstancedata( inputhash['name'], inputhash )
     elsif inputhash['count'] != nil
 	for instancenum in 0..(inputhash['count'] - 1) 
-	    instances << geninstancedata( inputhash['name'] + instancenum.to_s, inputhash)
+	    instances << geninstancedata( inputhash['name'] + instancenum.to_s, inputhash )
 	end
     else
 	raise "I don't know how you got here. I'm impressed."
@@ -165,10 +165,22 @@ instances.each { | instancecur |
 	raise "Must be able to copy #{instanceuserdata} to #{tmpdir}."
     end
 
-    if system( "#{isogen} -output #{$outdir}/#{instancecur['metadata']['instance-id']}.iso -volid cidata -joliet -rock #{tmpdir}/* > /dev/null 2>&1" )
+    #ISO generation block
+    if system( "#{isogen} -output #{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.iso \
+-volid cidata -joliet -rock #{tmpdir}/* > /dev/null 2>&1" )
 	$stderr.puts "ISO generation for #{instancecur['metadata']['instance-id']} successful!"
     else
-	raise "Failure during ISO generation for #{instancecur['instance-id']}!"
+	raise "Failure during ISO generation for #{instancecur['metadata']['instance-id']}!"
+    end
+
+    
+    #QCOW generation block. If qcowback is nil, we do nothing. Otherwise we proceed throug the routine
+    if ! instancecur['qcowback']
+    elsif system( "qemu-img create -q -f qcow2 -o backing_file=#{instancecur['qcowback']} \
+#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2" )
+	$stderr.puts "QCOW2 generation for #{instancecur['metadata']['instance-id']} successful!"
+    else
+	raise "Failure during QCOW2 disk generation for #{instancecur['metadata']['instance-id']}"
     end
 }
 
@@ -191,7 +203,7 @@ FileUtils.rm_rf( tmpdir )
 #DONE name iso after instance id.
 #DONE alternate output directory
 #DONE set up instance specific userdata
-#TODO set up qcow2 backed-cloning
+#DONE set up qcow2 backed-cloning
 #TODO create error message and exit function.
 #TODO create cleanup function 
 #
