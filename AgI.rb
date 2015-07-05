@@ -9,17 +9,40 @@ require 'yaml'
 # Declaring because habit
 inputdata = [ ]
 instances = [ ]
-userdata = nil
+$userdata = nil
 isogen = nil
 tmpdir = nil
-outdir = Dir.getwd
-qcowback = nil
+$outdir = Dir.getwd
+$qcowback = nil
 
 def genmetadata( id )
     md = Hash.new
     md['instance-id'] = id
     md['local-hostname'] = id.downcase
     return md
+end
+
+def geninstancedata( id, inputhash )
+    instancedata = Hash['metadata', genmetadata( id )]
+    #now we set the userdata
+    if inputhash['userdata']
+	instancedata['userdata'] = inputhash['userdata']
+    elsif $userdata
+	instancedata['userdata'] = $userdata
+    end
+    #set the output directory 
+    if inputhash['outdir']
+	instancedata['outdir'] = inputhash['outdir']
+    else
+	instancedata['outdir'] = $outdir
+    end
+    #set the disk gen
+    if inputhash['qcowback']
+	instancedata['qcowback'] = inputhash['qcowback']
+    elsif $qcowback
+	instancedata['qcowback'] = $qcowback
+    end
+    return instancedata
 end
 
 def goodqcow?( qcowfile )
@@ -76,7 +99,7 @@ opts.each { |option, value|
 	if inputdata.count > 0
 	    inputdata[-1]['userdata'] = value
 	else
-	    userdata = value
+	    $userdata = value
 	end
     when '--directory'
 	if ! goodoutdir?( value ) 
@@ -85,7 +108,7 @@ opts.each { |option, value|
 	if inputdata.count > 0
 	    inputdata[-1]['outdir'] = value
 	else
-	    outdir = value
+	    $outdir = value
 	end
     when '--disk'
 	if ! goodqcow?( value )
@@ -94,7 +117,7 @@ opts.each { |option, value|
 	if inputdata.count > 0
 	    inputdata[-1]['qcowback'] = value
 	else
-	    qcowback = value
+	    $qcowback = value
 	end
     end
 }
@@ -109,35 +132,41 @@ else
     raise "System must have genisoimage or mkisofs installed in the current mode."
 end
 
+if ! system( "which qemu-img > /dev/null 2>&1" )
+    raise "System must have qemu-img in the environment PATH to clone QCOW2 disks."
+end
+
 #convert input data into instance profiles
 inputdata.each { | inputhash |
+    #first set the name and generate the instance hash
     if inputhash['count'] == nil
-	instances << genmetadata(inputhash['name'])
+	instances << geninstancedata( inputhash['name'], inputhash )
     elsif inputhash['count'] != nil
 	for instancenum in 0..(inputhash['count'] - 1) 
-	    instances << genmetadata( inputhash['name'] + instancenum.to_s )
+	    instances << geninstancedata( inputhash['name'] + instancenum.to_s, inputhash)
 	end
     else
 	raise "I don't know how you got here. I'm impressed."
     end
-}    
+}   
 
 #create a temporary directory to write 
 tmpdir = Dir.mktmpdir or raise "Directory /tmp must be writable by the current user."
 
 #main loop - generates meta-data, copies includes, and creates ISOs
 instances.each { | instancecur |
+    FileUtils.rm_rf( "#{tmpdir}/*" )
     instancefile = File.new("#{tmpdir}/meta-data","w")
-    instancefile.write( instancecur.to_yaml )
+    instancefile.write( instancecur['metadata'].to_yaml )
     instancefile.close
-    if instanceuserdata = instancecur['user-data'] or instanceuserdata = userdata
+    if instanceuserdata = instancecur['user-data'] or instanceuserdata = $userdata
 	FileUtils.cp( instanceuserdata, "#{tmpdir}/user-data" ) 
     else 
 	raise "Must be able to copy #{instanceuserdata} to #{tmpdir}."
     end
 
-    if system( "#{isogen} -output #{outdir}/#{instancecur['instance-id']}.iso -volid cidata -joliet -rock #{tmpdir}/* > /dev/null 2>&1" )
-	$stderr.puts "ISO generation for #{instancecur['instance-id']} successful!"
+    if system( "#{isogen} -output #{$outdir}/#{instancecur['metadata']['instance-id']}.iso -volid cidata -joliet -rock #{tmpdir}/* > /dev/null 2>&1" )
+	$stderr.puts "ISO generation for #{instancecur['metadata']['instance-id']} successful!"
     else
 	raise "Failure during ISO generation for #{instancecur['instance-id']}!"
     end
@@ -155,8 +184,8 @@ FileUtils.rm_rf( tmpdir )
 #DONE change 'instances' to 'input'
 #DONE detect whether genisoimage/mkisofs otherwise error out and advise the use of directories.
 #DONE take userdata input file and include in all inputdata
-#TODO ?defaults input before any --name parameters
-#TODO restructure getopt loop to handle default & override configurations.
+#DONE ?defaults input before any --name parameters
+#DONE restructure getopt loop to handle default & override configurations.
 #TODO warn aboout any unset default userdata
 #TODO name dir after instance id.
 #DONE name iso after instance id.
