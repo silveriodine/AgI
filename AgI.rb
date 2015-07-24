@@ -15,6 +15,11 @@ tmpdir = nil
 $outdir = Dir.getwd
 $qcowback = nil
 
+def errexit(errmsg, exitcode = 1)
+    $stderr.puts( errmsg )
+    exit( exitcode )
+end
+
 def genmetadata( id )
     md = Hash.new
     md['instance-id'] = id
@@ -56,8 +61,8 @@ end
 
 def goodoutdir?( possibledir )
     #determine if output dir is writable
-    Dir.exist?( possibledir ) or raise "Specified path must be a directory."
-    File.writable?( possibledir ) or raise "Specified location must be writable."
+    Dir.exist?( possibledir ) or errexit( "Specified path must be a directory." )
+    File.writable?( possibledir ) or errexit( "Specified location must be writable." )
 end
 
 opts = GetoptLong.new( 
@@ -82,19 +87,19 @@ opts.each { |option, value|
 	if String(value).length > 0
 	    inputdata << { "name" => value }
 	else
-	    raise "Name must have a string of at least 1 character."
+	    errexit( "Name must have a string of at least 1 character." )
 	end
     when '--count'
 	if inputdata.count > 0 and Integer( value ) > 0
 	    inputdata[-1]['count'] = Integer( value )
 	elsif Integer( value ) > 0
-	    raise "Count must be a positive integer"
+	    errexit( "Count must be a positive integer" )
 	else
-	    raise "Count must come after a --name arument"
+	    errexit( "Count must come after a --name arument" )
 	end
     when '--userdata'
 	if ! File.file?( value )
-	    raise "Userdata must be path to a readable file."
+	    errexit( "Userdata must be path to a readable file." )
 	end
 	if inputdata.count > 0
 	    inputdata[-1]['userdata'] = value
@@ -103,7 +108,7 @@ opts.each { |option, value|
 	end
     when '--directory'
 	if ! goodoutdir?( value ) 
-	    raise "Output directory must be a valid and writable."
+	    errexit( "Output directory must be a valid and writable." )
 	end
 	if inputdata.count > 0
 	    inputdata[-1]['outdir'] = value
@@ -112,7 +117,7 @@ opts.each { |option, value|
 	end
     when '--disk'
 	if ! goodqcow?( value )
-	    raise "The file specified must be valid and QCOWv2 format"
+	    errexit( "The file specified must be valid and QCOWv2 format" )
 	end
 	if inputdata.count > 0
 	    inputdata[-1]['qcowback'] = value
@@ -129,11 +134,11 @@ if system( "which genisoimage > /dev/null 2>&1" )
 elsif system( "which mkisofs > /dev/null 2>&1" )
     isogen="mkisofs"
 else
-    raise "System must have genisoimage or mkisofs installed in the current mode."
+    errexit( "System must have genisoimage or mkisofs installed in the current mode." )
 end
 
 if ! system( "which qemu-img > /dev/null 2>&1" )
-    raise "System must have qemu-img in the environment PATH to clone QCOW2 disks."
+    errexit( "System must have qemu-img in the environment PATH to clone QCOW2 disks." )
 end
 
 #convert input data into instance profiles
@@ -146,12 +151,12 @@ inputdata.each { | inputhash |
 	    instances << geninstancedata( inputhash['name'] + instancenum.to_s, inputhash )
 	end
     else
-	raise "I don't know how you got here. I'm impressed."
+	errexit( "I don't know how you got here. I'm impressed." )
     end
 }   
 
 #create a temporary directory to write 
-tmpdir = Dir.mktmpdir or raise "Directory /tmp must be writable by the current user."
+tmpdir = Dir.mktmpdir or errexit( "Directory /tmp must be writable by the current user." )
 
 #main loop - generates meta-data, copies includes, and creates ISOs
 instances.each { | instancecur |
@@ -162,7 +167,7 @@ instances.each { | instancecur |
     if instanceuserdata = instancecur['user-data'] or instanceuserdata = $userdata
 	FileUtils.cp( instanceuserdata, "#{tmpdir}/user-data" ) 
     else 
-	raise "Must be able to copy #{instanceuserdata} to #{tmpdir}."
+	errexit( "Must be able to copy #{instanceuserdata} to #{tmpdir}." )
     end
 
     #ISO generation block
@@ -170,7 +175,7 @@ instances.each { | instancecur |
 -volid cidata -joliet -rock #{tmpdir}/* > /dev/null 2>&1" )
 	$stderr.puts "ISO generation for #{instancecur['metadata']['instance-id']} successful!"
     else
-	raise "Failure during ISO generation for #{instancecur['metadata']['instance-id']}!"
+	errexit( "Failure during ISO generation for #{instancecur['metadata']['instance-id']}!" )
     end
 
     
@@ -180,7 +185,7 @@ instances.each { | instancecur |
 #{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2" )
 	$stderr.puts "QCOW2 generation for #{instancecur['metadata']['instance-id']} successful!"
     else
-	raise "Failure during QCOW2 disk generation for #{instancecur['metadata']['instance-id']}"
+	errexit( "Failure during QCOW2 disk generation for #{instancecur['metadata']['instance-id']}" )
     end
 }
 
@@ -204,6 +209,6 @@ FileUtils.rm_rf( tmpdir )
 #DONE alternate output directory
 #DONE set up instance specific userdata
 #DONE set up qcow2 backed-cloning
-#TODO create error message and exit function.
+#DONE create error message and exit function.
 #TODO create cleanup function 
 #
