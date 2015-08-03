@@ -82,6 +82,7 @@ opts.each { |option, value|
 	puts "\t-c\n\t--count <integer>\tNumber of a given instance to generate"
 	puts "\t-u\n\t--userdata <file>\tCloud-init yaml configuration to supply\n\t\t\t\tto a group of instances"
 	puts "\t-C\n\t--directory <dir>\tDestination directory for generated files"
+	puts "\t-d\n\t--disk <qcow2 img>\tDisk template to use as backing file for qcow clones"
 	exit 0
     when '--name'
 	if String(value).length > 0
