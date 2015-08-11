@@ -11,12 +11,17 @@ inputdata = [ ]
 instances = [ ]
 $userdata = nil
 isogen = nil
-tmpdir = nil
+$tmpdir = nil
 $outdir = Dir.getwd
 $qcowback = nil
 
+def cleanup()
+    FileUtils.rm_rf( $tmpdir )
+end
+
 def errexit(errmsg, exitcode = 1)
     $stderr.puts( errmsg )
+    cleanup( )
     exit( exitcode )
 end
 
@@ -157,23 +162,23 @@ inputdata.each { | inputhash |
 }   
 
 #create a temporary directory to write 
-tmpdir = Dir.mktmpdir or errexit( "Directory /tmp must be writable by the current user." )
+$tmpdir = Dir.mktmpdir or errexit( "Directory /tmp must be writable by the current user." )
 
 #main loop - generates meta-data, copies includes, and creates ISOs
 instances.each { | instancecur |
-    FileUtils.rm_rf( "#{tmpdir}/*" )
-    instancefile = File.new("#{tmpdir}/meta-data","w")
+    FileUtils.rm_rf( "#{$tmpdir}/*" )
+    instancefile = File.new("#{$tmpdir}/meta-data","w")
     instancefile.write( instancecur['metadata'].to_yaml )
     instancefile.close
     if instanceuserdata = instancecur['user-data'] or instanceuserdata = $userdata
-	FileUtils.cp( instanceuserdata, "#{tmpdir}/user-data" ) 
+	FileUtils.cp( instanceuserdata, "#{$tmpdir}/user-data" ) 
     else 
-	errexit( "Must be able to copy #{instanceuserdata} to #{tmpdir}." )
+	errexit( "Must be able to copy #{instanceuserdata} to #{$tmpdir}." )
     end
 
     #ISO generation block
     if system( "#{isogen} -output #{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.iso \
--volid cidata -joliet -rock #{tmpdir}/* > /dev/null 2>&1" )
+-volid cidata -joliet -rock #{$tmpdir}/* > /dev/null 2>&1" )
 	$stderr.puts "ISO generation for #{instancecur['metadata']['instance-id']} successful!"
     else
 	errexit( "Failure during ISO generation for #{instancecur['metadata']['instance-id']}!" )
@@ -191,7 +196,7 @@ instances.each { | instancecur |
 }
 
 #cleanup
-FileUtils.rm_rf( tmpdir )
+cleanup( )
 
 #debug output
 #puts inputdata
@@ -211,5 +216,5 @@ FileUtils.rm_rf( tmpdir )
 #DONE set up instance specific userdata
 #DONE set up qcow2 backed-cloning
 #DONE create error message and exit function.
-#TODO create cleanup function 
+#DONE create cleanup function 
 #
