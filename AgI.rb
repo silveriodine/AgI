@@ -25,6 +25,10 @@ def errexit(errmsg, exitcode = 1)
     exit( exitcode )
 end
 
+def warn( errmsg )
+    $stderr.puts( "Warning: #{errmsg}" )
+end
+
 def genmetadata( id )
     md = Hash.new
     md['instance-id'] = id
@@ -132,6 +136,12 @@ opts.each { |option, value|
 	end
     end
 }
+
+#
+#Check for a default userdata path and warn if unset
+if ! $userdata
+    warn( "No default userdata set. Please correct this if it's not intended." )
+end
 
 #
 #determine if iso generation commands exist and save which it is.
