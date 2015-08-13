@@ -183,15 +183,15 @@ instances.each { | instancecur |
     if instanceuserdata = instancecur['user-data'] or instanceuserdata = $userdata
 	FileUtils.cp( instanceuserdata, "#{$tmpdir}/user-data" ) 
     else 
-	errexit( "Must be able to copy #{instanceuserdata} to #{$tmpdir}." )
+	errexit( "Must be able to copy \"#{instanceuserdata}\" to \"#{$tmpdir}\"." )
     end
 
     #ISO generation block
     if system( "#{isogen} -output #{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.iso \
 -volid cidata -joliet -rock #{$tmpdir}/* > /dev/null 2>&1" )
-	$stderr.puts "ISO generation for #{instancecur['metadata']['instance-id']} successful!"
+	$stderr.puts "ISO generation for \"#{instancecur['metadata']['instance-id']}\" successful!"
     else
-	errexit( "Failure during ISO generation for #{instancecur['metadata']['instance-id']}!" )
+	errexit( "Failure during ISO generation for \"#{instancecur['metadata']['instance-id']}\"!" )
     end
 
     
@@ -199,9 +199,9 @@ instances.each { | instancecur |
     if ! instancecur['qcowback']
     elsif system( "qemu-img create -q -f qcow2 -o backing_file=#{instancecur['qcowback']} \
 #{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2" )
-	$stderr.puts "QCOW2 generation for #{instancecur['metadata']['instance-id']} successful!"
+	$stderr.puts "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\" successful!"
     else
-	errexit( "Failure during QCOW2 disk generation for #{instancecur['metadata']['instance-id']}" )
+	errexit( "Failure during QCOW2 disk generation for \"#{instancecur['metadata']['instance-id']}\"" )
     end
 }
 
