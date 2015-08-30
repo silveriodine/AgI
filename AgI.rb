@@ -14,6 +14,7 @@ isogen = nil
 $tmpdir = nil
 $outdir = Dir.getwd
 $qcowback = nil
+$printstyle = nil
 
 def cleanup()
     FileUtils.rm_rf( $tmpdir )
@@ -80,7 +81,8 @@ opts = GetoptLong.new(
     [ '--count', '-c', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--userdata', '-u', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--directory', '-C', GetoptLong::REQUIRED_ARGUMENT ],
-    [ '--disk', '-d', GetoptLong::REQUIRED_ARGUMENT ]
+    [ '--disk', '-d', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--print', '-p', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
 opts.each { |option, value|
@@ -89,9 +91,12 @@ opts.each { |option, value|
 	puts "usage: AgI.rb [OPTIONS] ... --name <INSTANCE> [OPTIONS] ... "
 	puts "\t-n\n\t--name <instance>\tBase name for a group of instances"
 	puts "\t-c\n\t--count <integer>\tNumber of a given instance to generate"
-	puts "\t-u\n\t--userdata <file>\tCloud-init yaml configuration to supply\n\t\t\t\tto a group of instances"
+	puts "\t-u\n\t--userdata <file>\tCloud-init yaml configuration to supply\n\t\t\t\t
+to a group of instances"
 	puts "\t-C\n\t--directory <dir>\tDestination directory for generated files"
 	puts "\t-d\n\t--disk <qcow2 img>\tDisk template to use as backing file for qcow clones"
+	puts "\t-p\n\t--print [name[s]]\t\tDefine format of output, if any. 'name' is the default \
+if no argument is specificied.\n\t\t\t\tFormat 'names' prints the instance name which files are prefixed with."
 	exit 0
     when '--name'
 	if String(value).length > 0
@@ -133,6 +138,17 @@ opts.each { |option, value|
 	    inputdata[-1]['qcowback'] = value
 	else
 	    $qcowback = value
+	end
+    when '--print'
+	if $printstyle != nil
+	    warn("Output style is already set, the last instance of this flag will be set.")
+	end
+	if value == nil
+	    $printstyle = "names"
+	elsif value == "names" or value == "name"
+	    $printstyle = "names"
+	else
+	    errexit( "Print output style is not valid" )
 	end
     end
 }
@@ -182,26 +198,29 @@ instances.each { | instancecur |
     instancefile.close
     if instanceuserdata = instancecur['user-data'] or instanceuserdata = $userdata
 	FileUtils.cp( instanceuserdata, "#{$tmpdir}/user-data" ) 
-    else 
-	errexit( "Must be able to copy \"#{instanceuserdata}\" to \"#{$tmpdir}\"." )
+    #else 
+	#errexit( "Must be able to copy \"#{instanceuserdata}\" to \"#{$tmpdir}\"." )
     end
 
     #ISO generation block
     if system( "#{isogen} -output #{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.iso \
 -volid cidata -joliet -rock #{$tmpdir}/* > /dev/null 2>&1" )
-	$stderr.puts "ISO generation for \"#{instancecur['metadata']['instance-id']}\" successful!"
+	#$stderr.puts "ISO generation for \"#{instancecur['metadata']['instance-id']}\" successful!"
     else
 	errexit( "Failure during ISO generation for \"#{instancecur['metadata']['instance-id']}\"!" )
     end
 
-    
     #QCOW generation block. If qcowback is nil, we do nothing. Otherwise we proceed throug the routine
     if ! instancecur['qcowback']
     elsif system( "qemu-img create -q -f qcow2 -o backing_file=#{instancecur['qcowback']} \
 #{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2" )
-	$stderr.puts "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\" successful!"
+	#$stderr.puts "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\" successful!"
     else
 	errexit( "Failure during QCOW2 disk generation for \"#{instancecur['metadata']['instance-id']}\"" )
+    end
+    
+    if $printstyle == 'names'
+	puts( instancecur['metadata']['instance-id'] )
     end
 }
 
@@ -219,12 +238,14 @@ cleanup( )
 #DONE take userdata input file and include in all inputdata
 #DONE ?defaults input before any --name parameters
 #DONE restructure getopt loop to handle default & override configurations.
-#TODO warn aboout any unset default userdata
-#TODO name dir after instance id.
+#DONE warn aboout any unset default userdata
+#RM'd name dir after instance id.
 #DONE name iso after instance id.
 #DONE alternate output directory
 #DONE set up instance specific userdata
 #DONE set up qcow2 backed-cloning
 #DONE create error message and exit function.
 #DONE create cleanup function 
-#
+#TODO print each instance name for scripting purposes.
+#TODO add another usage example to README using every flag available
+#TODO add example scripted loop with qemu and --print name
