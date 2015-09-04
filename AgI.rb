@@ -246,6 +246,6 @@ cleanup( )
 #DONE set up qcow2 backed-cloning
 #DONE create error message and exit function.
 #DONE create cleanup function 
-#TODO print each instance name for scripting purposes.
+#DONE print each instance name for scripting purposes.
 #TODO add another usage example to README using every flag available
 #TODO add example scripted loop with qemu and --print name
