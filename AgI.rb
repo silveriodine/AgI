@@ -14,6 +14,7 @@ isogen = nil
 $tmpdir = nil
 $outdir = Dir.getwd
 $qcowback = nil
+$qcowsize = nil
 $printstyle = nil
 
 def cleanup()
@@ -57,6 +58,13 @@ def geninstancedata( id, inputhash )
     elsif $qcowback
 	instancedata['qcowback'] = $qcowback
     end
+    #set the disk resize size
+    if inputhash['qcowsize']
+	instancedata['qcowsize'] = inputhash['qcowsize']
+    elsif
+	instancedata['qcowsize'] = $qcowsize
+    end
+    #return the data
     return instancedata
 end
 
@@ -67,6 +75,13 @@ def goodqcow?( qcowfile )
     else
 	return False
     end
+end
+
+def goodqcowsize?( qcowsize )
+    if qcowsize =~ /^[1-9][0-9.]*[MmGg]$/
+	return true
+    end
+    return false
 end
 
 def goodoutdir?( possibledir )
@@ -82,6 +97,7 @@ opts = GetoptLong.new(
     [ '--userdata', '-u', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--directory', '-C', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--disk', '-d', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--size', '-s', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--print', '-p', GetoptLong::OPTIONAL_ARGUMENT ]
 )
 
@@ -95,6 +111,8 @@ opts.each { |option, value|
 to a group of instances"
 	puts "\t-C\n\t--directory <dir>\tDestination directory for generated files"
 	puts "\t-d\n\t--disk <qcow2 img>\tDisk template to use as backing file for qcow clones"
+	puts "\t-s\n\t--size <desired>\tResize the disk to a desired size. Problems will occur\n\t\t\t\t\
+if the new size is smaller than the original."
 	puts "\t-p\n\t--print [name[s]]\t\tDefine format of output, if any. 'name' is the default \
 if no argument is specificied.\n\t\t\t\tFormat 'names' prints the instance name which files are prefixed with."
 	exit 0
@@ -150,7 +168,19 @@ if no argument is specificied.\n\t\t\t\tFormat 'names' prints the instance name 
 	else
 	    errexit( "Print output style is not valid" )
 	end
+    when '--size'
+	if ! goodqcowsize?( value ) 
+	    errexit( "Qcow resize must be in the form of a float or decimal with an M or G suffix" )
+	end
+	warn( "qcowsize is #{value}" )
+	if inputdata[-1] 
+	    inputdata[-1]['qcowsize'] = value
+	elsif $qcowback 
+	    $qcowsize = value
+	end
+	#warn( inputdata[-1]['qcowsize'] + " " + $qcowsize + ";" )
     end
+
 }
 
 #
@@ -213,8 +243,8 @@ instances.each { | instancecur |
     #QCOW generation block. If qcowback is nil, we do nothing. Otherwise we proceed throug the routine
     if ! instancecur['qcowback']
     elsif system( "qemu-img create -q -f qcow2 -o backing_file=#{instancecur['qcowback']} \
-#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2" )
-	#$stderr.puts "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\" successful!"
+#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2 #{instancecur['qcowsize']}" )
+	#$stderr.puts "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\ at size \"#{instancecur['qcowsize']}\" successful!"
     else
 	errexit( "Failure during QCOW2 disk generation for \"#{instancecur['metadata']['instance-id']}\"" )
     end
@@ -248,4 +278,6 @@ cleanup( )
 #DONE create cleanup function 
 #DONE print each instance name for scripting purposes.
 #TODO add another usage example to README using every flag available
-#TODO add example scripted loop with qemu and --print name
+#DONE add example scripted loop with qemu and --print name
+#DONE add argument to resize qcow disks to a new size.
+#TODO Add a basic userdata file that sets an unencrypted password and adds a dummy ssh key.
