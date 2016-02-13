@@ -280,4 +280,5 @@ cleanup( )
 #TODO add another usage example to README using every flag available
 #DONE add example scripted loop with qemu and --print name
 #DONE add argument to resize qcow disks to a new size.
-#TODO Add a basic userdata file that sets an unencrypted password and adds a dummy ssh key.
+#TODO Add a basic userdata file that sets an unencrypted password and adds a dummy ssh key
+#TODO Enable creation of secondary disks for instances
