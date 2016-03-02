@@ -20,6 +20,47 @@ $debug = 0
 #by default output is silenced
 $cmdoutput = " > /dev/null 2>&1" 
 
+class Instance
+    def initialize
+	@name=nil
+	@hostname=nil
+	@disks=[]
+	@mem=nil
+	@ud={}
+    end
+    
+    attr_reader :mem
+    attr_reader :disks
+    attr_reader :hostname
+    attr_reader :name
+    attr_reader :ud
+
+    def name= ( name )
+	@name = name
+    end
+
+    def hostname= ( hn )
+	@hostname= hn.downcase.gsub( /[^a-z0-9\-]/, "" )
+    end
+
+    def disk_add ( src=nil, size=nil, dst=nil ) 
+    	errexit "Disk must have a source or size set" if ! src and ! size
+	@disks << {}
+	@disks[-1]['src']= src if src
+	@disks[-1]['size']=size if size
+	@disks[-1]['dst']=size if dst
+    end
+
+    def metadata
+	md = {}
+	md['instance-id'] = name
+	hostname = name.downcase.gsub( /[^a-z0-9\-]/, "" ) if hostname
+	errexit( "Unable to derive valid hostname." ) if hostname.empty?
+	md['local-hostname'] = id.downcase
+    end
+
+end
+
 def cleanup()
     FileUtils.rm_rf( $tmpdir )
 end
@@ -43,6 +84,7 @@ def debug( lvl=1, msg )
     end
 end
 
+#generate the metadata hash for 
 def genmetadata( id )
     md = Hash.new
     md['instance-id'] = id
@@ -80,6 +122,7 @@ def geninstancedata( id, inputhash )
     return instancedata
 end
 
+#checks whether a file is real, readable, and qcow v2. 
 def goodqcow?( qcowfile )
     if File.exist?( qcowfile ) && system( "which file > /dev/null 2>&1" )
 	fileout = %x[ file "#{qcowfile}" ]
