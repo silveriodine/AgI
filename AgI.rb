@@ -16,6 +16,7 @@ $outdir = Dir.getwd
 $qcowback = nil
 $qcowsize = nil
 $printstyle = nil
+$debug = nil
 
 def cleanup()
     FileUtils.rm_rf( $tmpdir )
@@ -29,6 +30,14 @@ end
 
 def warn( errmsg )
     $stderr.puts( "Warning: #{errmsg}" )
+end
+
+def debug( lvl=1, msg )
+    #shitty compromise to make
+    case $debug
+    when 1..lvl
+	$stderr.puts msg
+    end
 end
 
 def genmetadata( id )
@@ -92,6 +101,7 @@ end
 
 opts = GetoptLong.new( 
     [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+    [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ],
     [ '--name', '-n', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--count', '-c', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--userdata', '-u', GetoptLong::REQUIRED_ARGUMENT ],
@@ -115,6 +125,7 @@ to a group of instances"
 if the new size is smaller than the original."
 	puts "\t-p\n\t--print [name[s]]\t\tDefine format of output, if any. 'name' is the default \
 if no argument is specificied.\n\t\t\t\tFormat 'names' prints the instance name which files are prefixed with."
+	puts "\t-v\n\t--verbose\t\tAdd output about what the AgI is doing."
 	exit 0
     when '--name'
 	if String(value).length > 0
@@ -179,6 +190,9 @@ if no argument is specificied.\n\t\t\t\tFormat 'names' prints the instance name 
 	    $qcowsize = value
 	end
 	#warn( inputdata[-1]['qcowsize'] + " " + $qcowsize + ";" )
+    when '--verbose'
+	if ! $debug
+	$debug = $debug + 1
     end
 
 }
@@ -233,18 +247,23 @@ instances.each { | instancecur |
     end
 
     #ISO generation block
-    if system( "#{isogen} -output #{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.iso \
--volid cidata -joliet -rock #{$tmpdir}/* > /dev/null 2>&1" )
-	#$stderr.puts "ISO generation for \"#{instancecur['metadata']['instance-id']}\" successful!"
+
+    isogenstr = "#{isogen} -output \"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.iso\" \
+-volid cidata -joliet -rock #{$tmpdir}/* > /dev/null 2>&1"
+    $stderr.puts isogenstr if debug
+    if system( isogenstr )
+	$stderr.puts "ISO generation for \"#{instancecur['metadata']['instance-id']}\" successful!" if debug
     else
 	errexit( "Failure during ISO generation for \"#{instancecur['metadata']['instance-id']}\"!" )
     end
 
     #QCOW generation block. If qcowback is nil, we do nothing. Otherwise we proceed throug the routine
     if ! instancecur['qcowback']
-    elsif system( "qemu-img create -q -f qcow2 -o backing_file=#{instancecur['qcowback']} \
-#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2 #{instancecur['qcowsize']}" )
-	#$stderr.puts "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\ at size \"#{instancecur['qcowsize']}\" successful!"
+    qemuimgcreate = "qemu-img create -q -f qcow2 -o backing_file=\"#{instancecur['qcowback']}\" \
+\"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2\" #{instancecur['qcowsize']}"
+    $stderr.puts qemuimgcreate if debug
+    elsif system( qemuimgcreate )
+	$stderr.puts "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\ at size \"#{instancecur['qcowsize']}\" successful!" if debug
     else
 	errexit( "Failure during QCOW2 disk generation for \"#{instancecur['metadata']['instance-id']}\"" )
     end
@@ -254,7 +273,7 @@ instances.each { | instancecur |
     end
 }
 
-#cleanup
+# call the cleanup function to remove our temp folder
 cleanup( )
 
 #debug output
