@@ -33,9 +33,10 @@ def warn( errmsg )
 end
 
 def debug( lvl=1, msg )
-    #shitty compromise to make
-    case $debug
-    when 1..lvl
+    #shitty compromise to make debug behave the way I want it. 
+    #the When statement abuses ruby ranges not decrimenting
+    case lvl
+    when 1..$debug
 	$stderr.puts msg
     end
 end
