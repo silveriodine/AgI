@@ -16,7 +16,7 @@ $outdir = Dir.getwd
 $qcowback = nil
 $qcowsize = nil
 $printstyle = nil
-$debug = nil
+$debug = 0
 
 def cleanup()
     FileUtils.rm_rf( $tmpdir )
@@ -192,7 +192,6 @@ if no argument is specificied.\n\t\t\t\tFormat 'names' prints the instance name 
 	end
 	#warn( inputdata[-1]['qcowsize'] + " " + $qcowsize + ";" )
     when '--verbose'
-	if ! $debug
 	$debug = $debug + 1
     end
 
@@ -208,14 +207,18 @@ end
 #determine if iso generation commands exist and save which it is.
 if system( "which genisoimage > /dev/null 2>&1" )
     isogen="genisoimage"
+    debug( 2,"Found genisoimage" )
 elsif system( "which mkisofs > /dev/null 2>&1" )
     isogen="mkisofs"
+    debug( 2,"Found mkisofs" )
 else
     errexit( "System must have genisoimage or mkisofs installed in the current mode." )
 end
 
 if ! system( "which qemu-img > /dev/null 2>&1" )
     errexit( "System must have qemu-img in the environment PATH to clone QCOW2 disks." )
+else
+    debug( 2, "Found qemu-img" )
 end
 
 #convert input data into instance profiles
@@ -234,10 +237,12 @@ inputdata.each { | inputhash |
 
 #create a temporary directory to write 
 $tmpdir = Dir.mktmpdir or errexit( "Directory /tmp must be writable by the current user." )
+debug( "Created temp directory #{$tmpdir}" )
 
 #main loop - generates meta-data, copies includes, and creates ISOs
 instances.each { | instancecur |
     FileUtils.rm_rf( "#{$tmpdir}/*" )
+    debug( 2, "Cleaned #{$tmpdir}" )
     instancefile = File.new("#{$tmpdir}/meta-data","w")
     instancefile.write( instancecur['metadata'].to_yaml )
     instancefile.close
@@ -251,9 +256,9 @@ instances.each { | instancecur |
 
     isogenstr = "#{isogen} -output \"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.iso\" \
 -volid cidata -joliet -rock #{$tmpdir}/* > /dev/null 2>&1"
-    $stderr.puts isogenstr if debug
+    debug( 2,"ISO generation command: #{isogenstr}" )
     if system( isogenstr )
-	$stderr.puts "ISO generation for \"#{instancecur['metadata']['instance-id']}\" successful!" if debug
+	debug( "ISO generation for \"#{instancecur['metadata']['instance-id']}\" successful!" )
     else
 	errexit( "Failure during ISO generation for \"#{instancecur['metadata']['instance-id']}\"!" )
     end
@@ -262,9 +267,9 @@ instances.each { | instancecur |
     if ! instancecur['qcowback']
     qemuimgcreate = "qemu-img create -q -f qcow2 -o backing_file=\"#{instancecur['qcowback']}\" \
 \"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2\" #{instancecur['qcowsize']}"
-    $stderr.puts qemuimgcreate if debug
+    debug( 2, "QCOW2 creation command: #{qemuimgcreate}" )
     elsif system( qemuimgcreate )
-	$stderr.puts "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\ at size \"#{instancecur['qcowsize']}\" successful!" if debug
+	debug( "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\ at size \"#{instancecur['qcowsize']}\" successful!" )
     else
 	errexit( "Failure during QCOW2 disk generation for \"#{instancecur['metadata']['instance-id']}\"" )
     end
