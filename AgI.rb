@@ -17,6 +17,8 @@ $qcowback = nil
 $qcowsize = nil
 $printstyle = nil
 $debug = 0
+#by default output is silenced
+$cmdoutput = " > /dev/null 2>&1" 
 
 def cleanup()
     FileUtils.rm_rf( $tmpdir )
@@ -193,6 +195,10 @@ if no argument is specificied.\n\t\t\t\tFormat 'names' prints the instance name 
 	#warn( inputdata[-1]['qcowsize'] + " " + $qcowsize + ";" )
     when '--verbose'
 	$debug = $debug + 1
+	if $debug > 3
+	    #change output to direct to stderr 
+	    $cmdoutput = " 1>&2 "
+	end
     end
 
 }
@@ -205,17 +211,17 @@ end
 
 #
 #determine if iso generation commands exist and save which it is.
-if system( "which genisoimage > /dev/null 2>&1" )
+if system( "which genisoimage #{$cmdoutput}" )
     isogen="genisoimage"
     debug( 2,"Found genisoimage" )
-elsif system( "which mkisofs > /dev/null 2>&1" )
+elsif system( "which mkisofs #{$cmdoutput}" )
     isogen="mkisofs"
     debug( 2,"Found mkisofs" )
 else
     errexit( "System must have genisoimage or mkisofs installed in the current mode." )
 end
 
-if ! system( "which qemu-img > /dev/null 2>&1" )
+if ! system( "which qemu-img #{$cmdoutput}" )
     errexit( "System must have qemu-img in the environment PATH to clone QCOW2 disks." )
 else
     debug( 2, "Found qemu-img" )
@@ -255,7 +261,7 @@ instances.each { | instancecur |
     #ISO generation block
 
     isogenstr = "#{isogen} -output \"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.iso\" \
--volid cidata -joliet -rock #{$tmpdir}/* > /dev/null 2>&1"
+-volid cidata -joliet -rock #{$tmpdir}/* #{$cmdoutput}"
     debug( 2,"ISO generation command: #{isogenstr}" )
     if system( isogenstr )
 	debug( "ISO generation for \"#{instancecur['metadata']['instance-id']}\" successful!" )
@@ -266,7 +272,7 @@ instances.each { | instancecur |
     #QCOW generation block. If qcowback is nil, we do nothing. Otherwise we proceed throug the routine
     if ! instancecur['qcowback']
     qemuimgcreate = "qemu-img create -q -f qcow2 -o backing_file=\"#{instancecur['qcowback']}\" \
-\"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2\" #{instancecur['qcowsize']}"
+\"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2\" #{instancecur['qcowsize']} #{$cmdoutput}"
     debug( 2, "QCOW2 creation command: #{qemuimgcreate}" )
     elsif system( qemuimgcreate )
 	debug( "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\ at size \"#{instancecur['qcowsize']}\" successful!" )
