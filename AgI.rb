@@ -26,6 +26,9 @@ class Instance
 	@hostname=nil
 	@disks=[]
 	@mem=nil
+	@outdir= "./"
+	#ud is short for User-Data,
+	#A hash to be converted to YAML
 	@ud={}
     end
     
@@ -33,7 +36,7 @@ class Instance
     attr_reader :disks
     attr_reader :hostname
     attr_reader :name
-    attr_reader :ud
+    attr_accessor :outdir
 
     def name= ( name )
 	@name = name
@@ -43,7 +46,7 @@ class Instance
 	@hostname= hn.downcase.gsub( /[^a-z0-9\-]/, "" )
     end
 
-    def disk_add ( src=nil, size=nil, dst=nil ) 
+    def diskAdd ( src=nil, size=nil, dst=nil ) 
     	errexit "Disk must have a source or size set" if ! src and ! size
 	@disks << {}
 	@disks[-1]['src']= src if src
@@ -57,6 +60,14 @@ class Instance
 	hostname = name.downcase.gsub( /[^a-z0-9\-]/, "" ) if hostname
 	errexit( "Unable to derive valid hostname." ) if hostname.empty?
 	md['local-hostname'] = id.downcase
+    end
+
+    def userdataAdd( udUpdate )
+	@ud.merge( udUpdate )
+    end
+
+    def userdata
+	return ud
     end
 
 end
@@ -94,17 +105,26 @@ end
 
 def geninstancedata( id, inputhash )
     instancedata = Hash['metadata', genmetadata( id )]
+    instdata = Instance.new 
     #now we set the userdata
     if inputhash['userdata']
 	instancedata['userdata'] = inputhash['userdata']
+	udFile = File.new(inputhash['userdata'], "r")
+	instdata.userdataAdd( YAML.load( udFile.read ) )
+	udFile.close
     elsif $userdata
 	instancedata['userdata'] = $userdata
+	udFile = File.new($userdata, "r")
+	instdata.userdataAdd( YAML.load( udFile.read ) )
+	udFile.close
     end
     #set the output directory 
     if inputhash['outdir']
 	instancedata['outdir'] = inputhash['outdir']
+	instdata.outdir = inputhash['outdir']
     else
 	instancedata['outdir'] = $outdir
+	instdata.outdir = $outdir
     end
     #set the disk gen
     if inputhash['qcowback']
@@ -117,6 +137,11 @@ def geninstancedata( id, inputhash )
 	instancedata['qcowsize'] = inputhash['qcowsize']
     elsif
 	instancedata['qcowsize'] = $qcowsize
+    end
+    if inputhash['qcowback'] and inputhash['qcowsize']
+	instdata.diskAdd( src = inputhash['qcowback'], size = inputhash['qcowsize'], dst = instdata.outdir)
+    elsif inputhash['qcowback'] and ! inputhash['qcowsize']
+	instdata.diskAdd( src = inputhash['qcowback'], dst = instdata.outdir)
     end
     #return the data
     return instancedata
