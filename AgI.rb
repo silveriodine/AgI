@@ -70,6 +70,18 @@ class Instance
 	return ud
     end
 
+    def to_s
+	inststring = ""
+	inststring << "Name: #{self.name}\n"
+	inststring << "Hostname: #{self.hostname}\n"
+	disks.each do | disk |
+	    inststring << "Disk: #{disk.src}, #{disk.size}, #{disk.dst}\n"
+	end
+	inststring << "Mem: #{self.mem}\n"
+	inststring << "Output: #{self.outdir}\n"
+	inststring << "User Data: #{@ud}\n"
+    end
+
 end
 
 def cleanup()
@@ -106,6 +118,7 @@ end
 def geninstancedata( id, inputhash )
     instancedata = Hash['metadata', genmetadata( id )]
     instdata = Instance.new 
+    instdata.name = id
     #now we set the userdata
     if inputhash['userdata']
 	instancedata['userdata'] = inputhash['userdata']
@@ -143,6 +156,7 @@ def geninstancedata( id, inputhash )
     elsif inputhash['qcowback'] and ! inputhash['qcowsize']
 	instdata.diskAdd( src = inputhash['qcowback'], dst = instdata.outdir)
     end
+    debug( 2, instdata )
     #return the data
     return instancedata
 end
