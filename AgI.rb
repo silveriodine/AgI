@@ -63,11 +63,13 @@ class Instance
     end
 
     def userdataAdd( udUpdate )
-	@ud.merge( udUpdate )
+	debug( 3, "UDAdd udUpdate Pre-merge: #{udUpdate}\nUDAdd @ud Pre-Merge: #{@ud}" )
+	@ud = @ud.merge( udUpdate )
+	debug( 3, "UDAdd @ud Post-merge: #{@ud}" )
     end
 
     def userdata
-	return ud
+	return @ud
     end
 
     def to_s
@@ -123,12 +125,16 @@ def geninstancedata( id, inputhash )
     if inputhash['userdata']
 	instancedata['userdata'] = inputhash['userdata']
 	udFile = File.new(inputhash['userdata'], "r")
-	instdata.userdataAdd( YAML.load( udFile.read ) )
+	udhash = YAML.load( udFile.read )
+	debug( 2, "Userdata hash: #{udhash}" )
+	instdata.userdataAdd( udhash  )
 	udFile.close
     elsif $userdata
 	instancedata['userdata'] = $userdata
 	udFile = File.new($userdata, "r")
-	instdata.userdataAdd( YAML.load( udFile.read ) )
+	udhash = YAML.load( udFile.read )
+	debug( 2, "Userdata hash: #{udhash}" )
+	instdata.userdataAdd( udhash  )
 	udFile.close
     end
     #set the output directory 
