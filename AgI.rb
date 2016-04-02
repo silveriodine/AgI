@@ -75,7 +75,7 @@ class Instance
 	inststring << "Name: #{self.name}\n"
 	inststring << "Hostname: #{self.hostname}\n"
 	disks.each do | disk |
-	    inststring << "Disk: #{disk.src}, #{disk.size}, #{disk.dst}\n"
+	    inststring << "Disk: #{disk['src']}, #{disk['size']}, #{disk['dst']}\n"
 	end
 	inststring << "Mem: #{self.mem}\n"
 	inststring << "Output: #{self.outdir}\n"
