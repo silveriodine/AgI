@@ -271,17 +271,17 @@ instances.each { | instancecur |
 
     #QCOW generation block. If qcowback is nil, we do nothing. Otherwise we proceed throug the routine
     if instancecur['qcowback']
-		#create the qemu-img clone command in a string
-		qemuimgcreate = "qemu-img create -q -f qcow2 -o backing_file=\"#{instancecur['qcowback']}\" \
+	#create the qemu-img clone command in a string
+	qemuimgcreate = "qemu-img create -q -f qcow2 -o backing_file=\"#{instancecur['qcowback']}\" \
 \"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2\" #{instancecur['qcowsize']} #{$cmdoutput}"
-		debug( 2, "QCOW2 creation command: #{qemuimgcreate}" )
-    
-		#then run the qemu-img command
-		if system( qemuimgcreate )
-			debug( "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\ at size \"#{instancecur['qcowsize']}\" successful!" )
-		else
-			errexit( "Failure during QCOW2 disk generation for \"#{instancecur['metadata']['instance-id']}\"" )
-		end
+	debug( 2, "QCOW2 creation command: #{qemuimgcreate}" )
+
+	#then run the qemu-img command
+	if system( qemuimgcreate )
+	    debug( "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\ at size \"#{instancecur['qcowsize']}\" successful!" )
+	else
+	    errexit( "Failure during QCOW2 disk generation for \"#{instancecur['metadata']['instance-id']}\"" )
+	end
     end
     
     if $printstyle == 'names'
