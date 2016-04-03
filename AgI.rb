@@ -68,10 +68,9 @@ class Instance
 
     def metadata
 	md = {}
-	md['instance-id'] = name
-	hostname = name.downcase.gsub( /[^a-z0-9\-]/, "" ) if hostname
-	errexit( "Unable to derive valid hostname." ) if hostname.empty?
-	md['local-hostname'] = id.downcase
+	md['instance-id'] = @name
+	md['local-hostname'] = self.hostname
+	return md
     end
 
     def userdataAdd( udUpdate )
@@ -189,7 +188,7 @@ def geninstancedata( id, inputhash )
     end
     debug( 2, instdata )
     #return the data
-    return instancedata
+    return instdata
 end
 
 #checks whether a file is real, readable, and qcow v2. 
@@ -363,42 +362,45 @@ instances.each { | instancecur |
     FileUtils.rm_rf( "#{$tmpdir}/*" )
     debug( 2, "Cleaned #{$tmpdir}" )
     instancefile = File.new("#{$tmpdir}/meta-data","w")
-    instancefile.write( instancecur['metadata'].to_yaml )
+    instancefile.write( instancecur.metadata.to_yaml )
     instancefile.close
-    if instanceuserdata = instancecur['user-data'] or instanceuserdata = $userdata
-	FileUtils.cp( instanceuserdata, "#{$tmpdir}/user-data" ) 
+    if instancecur.userdata.count > 0
+	udFile = File.new( File.join( $tmpdir, "user-data" ), "w" )
+	udFile.write( "#cloud-config\n" ) 
+	udFile.write( instancecur.userdata.to_yaml )
+	udFile.close( )
     #else 
 	#errexit( "Must be able to copy \"#{instanceuserdata}\" to \"#{$tmpdir}\"." )
     end
 
     #ISO generation block
 
-    isogenstr = "#{isogen} -output \"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.iso\" \
+    isogenstr = "#{isogen} -output \"#{File.join( instancecur.outdir, instancecur.name + ".iso" ) }\" \
 -volid cidata -joliet -rock #{$tmpdir}/* #{$cmdoutput}"
     debug( 2,"ISO generation command: #{isogenstr}" )
     if system( isogenstr )
-	debug( "ISO generation for \"#{instancecur['metadata']['instance-id']}\" successful!" )
+	debug( "ISO generation for \"#{instancecur.name}\" successful!" )
     else
-	errexit( "Failure during ISO generation for \"#{instancecur['metadata']['instance-id']}\"!" )
+	errexit( "Failure during ISO generation for \"#{instancecur.name}\"!" )
     end
 
     #QCOW generation block. If qcowback is nil, we do nothing. Otherwise we proceed throug the routine
-    if instancecur['qcowback']
+    instancecur.disks.each do | instdisk | 
 	#create the qemu-img clone command in a string
-	qemuimgcreate = "qemu-img create -q -f qcow2 -o backing_file=\"#{instancecur['qcowback']}\" \
-\"#{instancecur['outdir']}/#{instancecur['metadata']['instance-id']}.qcow2\" #{instancecur['qcowsize']} #{$cmdoutput}"
+	qemuimgcreate = "qemu-img create -q -f qcow2 -o backing_file=\"#{instdisk['src']}\" \
+\"#{instdisk['dst']}\" #{instdisk['size']} #{$cmdoutput}"
 	debug( 2, "QCOW2 creation command: #{qemuimgcreate}" )
 
 	#then run the qemu-img command
 	if system( qemuimgcreate )
-	    debug( "QCOW2 generation for \"#{instancecur['metadata']['instance-id']}\ at size \"#{instancecur['qcowsize']}\" successful!" )
+	    debug( "QCOW2 generation for \"#{instancecur.name}\" at size \"#{instdisk['size']}\" successful!" )
 	else
-	    errexit( "Failure during QCOW2 disk generation for \"#{instancecur['metadata']['instance-id']}\"" )
+	    errexit( "Failure during QCOW2 disk generation for \"#{instancecur.name}\"" )
 	end
     end
     
     if $printstyle == 'names'
-	puts( instancecur['metadata']['instance-id'] )
+	puts( instancecur.name )
     end
 }
 
