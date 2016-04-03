@@ -51,7 +51,12 @@ class Instance
 	@disks << {}
 	@disks[-1]['src']= src if src
 	@disks[-1]['size']=size if size
-	@disks[-1]['dst']=size if dst
+	if !dst and @disks.count == 1
+		dst = File.join($outdir, "#{@name}.qcow2")
+	elsif !dst and @disks.count > 1
+		dst = File.join($outdir, "#{@name}-d#{@disks.count - 1}.qcow2")
+	end
+	@disks[-1]['dst']=dst if dst
     end
 
     def metadata
