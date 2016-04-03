@@ -34,7 +34,6 @@ class Instance
     
     attr_reader :mem
     attr_reader :disks
-    attr_reader :hostname
     attr_reader :name
     attr_accessor :outdir
 
@@ -45,6 +44,14 @@ class Instance
     def hostname= ( hn )
 	@hostname= hn.downcase.gsub( /[^a-z0-9\-]/, "" )
     end
+	
+	def hostname
+		if @hostname
+			return @hostname
+		else
+			return @name.downcase.gsub( /[^a-z0-9\-]/, "" )
+		end
+	end
 
     def diskAdd ( src=nil, size=nil, dst=nil ) 
     	errexit "Disk must have a source or size set" if ! src and ! size
