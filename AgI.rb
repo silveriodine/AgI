@@ -76,6 +76,7 @@ class Instance
 	inststring = ""
 	inststring << "Name: #{self.name}\n"
 	inststring << "Hostname: #{self.hostname}\n"
+	inststring << "Disk count: #{disks.count}\n"
 	disks.each do | disk |
 	    inststring << "Disk: #{disk['src']}, #{disk['size']}, #{disk['dst']}\n"
 	end
@@ -157,10 +158,22 @@ def geninstancedata( id, inputhash )
     elsif
 	instancedata['qcowsize'] = $qcowsize
     end
-    if inputhash['qcowback'] and inputhash['qcowsize']
-	instdata.diskAdd( src = inputhash['qcowback'], size = inputhash['qcowsize'], dst = instdata.outdir)
-    elsif inputhash['qcowback'] and ! inputhash['qcowsize']
-	instdata.diskAdd( src = inputhash['qcowback'], dst = instdata.outdir)
+    if inputhash['qcowback']
+		if inputhash['qcowsize']
+			instdata.diskAdd( src = inputhash['qcowback'], size = inputhash['qcowsize'])
+		elsif $qcowsize
+			instdata.diskAdd( src = inputhash['qcowback'], size = $qcowsize)
+		else
+			instdata.diskAdd( src = inputhash['qcowback'])
+		end
+    elsif $qcowback
+		if inputhash['qcowsize']
+			instdata.diskAdd( src = $qcowback, size = inputhash['qcowsize'])
+		elsif $qcowsize
+			instdata.diskAdd( src = $qcowback, size = $qcowsize)
+		else
+			instdata.diskAdd( src = $qcowback)
+		end
     end
     debug( 2, instdata )
     #return the data
