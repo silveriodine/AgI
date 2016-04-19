@@ -59,9 +59,9 @@ class Instance
 	@disks[-1]['src']= src if src
 	@disks[-1]['size']=size if size
 	if !dst and @disks.count == 1
-		dst = File.join($outdir, "#{@name}.qcow2")
+		dst = "#{@name}.qcow2"
 	elsif !dst and @disks.count > 1
-		dst = File.join($outdir, "#{@name}-d#{@disks.count - 1}.qcow2")
+		dst = "#{@name}-d#{@disks.count - 1}.qcow2"
 	end
 	@disks[-1]['dst']=dst if dst
     end
@@ -388,7 +388,7 @@ instances.each { | instancecur |
     instancecur.disks.each do | instdisk | 
 	#create the qemu-img clone command in a string
 	qemuimgcreate = "qemu-img create -q -f qcow2 -o backing_file=\"#{instdisk['src']}\" \
-\"#{instdisk['dst']}\" #{instdisk['size']} #{$cmdoutput}"
+\"#{File.join( instancecur.outdir, instdisk['dst'] )}\" #{instdisk['size']} #{$cmdoutput}"
 	debug( 2, "QCOW2 creation command: #{qemuimgcreate}" )
 
 	#then run the qemu-img command
