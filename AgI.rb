@@ -130,45 +130,33 @@ def genmetadata( id )
 end
 
 def geninstancedata( id, inputhash )
-    instancedata = Hash['metadata', genmetadata( id )]
+
     instdata = Instance.new 
     instdata.name = id
+
     #now we set the userdata
     if inputhash['userdata']
-	instancedata['userdata'] = inputhash['userdata']
 	udFile = File.new(inputhash['userdata'], "r")
 	udhash = YAML.load( udFile.read )
 	debug( 2, "Userdata hash: #{udhash}" )
 	instdata.userdataAdd( udhash  )
 	udFile.close
     elsif $userdata
-	instancedata['userdata'] = $userdata
 	udFile = File.new($userdata, "r")
 	udhash = YAML.load( udFile.read )
 	debug( 2, "Userdata hash: #{udhash}" )
 	instdata.userdataAdd( udhash  )
 	udFile.close
     end
+
     #set the output directory 
     if inputhash['outdir']
-	instancedata['outdir'] = inputhash['outdir']
 	instdata.outdir = inputhash['outdir']
     else
-	instancedata['outdir'] = $outdir
 	instdata.outdir = $outdir
     end
-    #set the disk gen
-    if inputhash['qcowback']
-	instancedata['qcowback'] = inputhash['qcowback']
-    elsif $qcowback
-	instancedata['qcowback'] = $qcowback
-    end
-    #set the disk resize size
-    if inputhash['qcowsize']
-	instancedata['qcowsize'] = inputhash['qcowsize']
-    elsif
-	instancedata['qcowsize'] = $qcowsize
-    end
+
+    #set the disk gen & set the disk resize size
     if inputhash['qcowback']
 		if inputhash['qcowsize']
 			instdata.diskAdd( src = inputhash['qcowback'], size = inputhash['qcowsize'])
@@ -187,6 +175,7 @@ def geninstancedata( id, inputhash )
 		end
     end
     debug( 2, instdata )
+
     #return the data
     return instdata
 end
